@@ -47,18 +47,19 @@ async function run() {
     });
 
     // User Role Update
-    app.patch('users/:id', async (req, res)=>{
-const id = req.params.id;
-const filter = {_id: new ObjectId(id)}
-const updateRole = {
-  $set:{
-    role:'Admin'
-  }
-}
+    app.patch("/users/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updateRole = {
+        // Set the role based on the request body
+        $set: {
+          role: req.body.role,
+        },
+      };
 
-const result = await usersCollection.updateOne(filter, updateRole);
-res.send(result)
-    })
+      const result = await usersCollection.updateOne(filter, updateRole);
+      res.send({ modifiedCount: result.modifiedCount }); // Send modified count
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
