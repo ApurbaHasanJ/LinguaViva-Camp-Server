@@ -29,7 +29,12 @@ async function run() {
 
     const usersCollection = client.db('LVCdb').collection("users")
 
-    
+    // get all users
+    app.get('/users', async (req, res)=>{
+      const result = await usersCollection.find().toArray()
+      res.send(result)
+
+    })
 
 // collect user data
 app.post('/users', async (req, res)=>{
