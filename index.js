@@ -33,7 +33,7 @@ async function run() {
       res.send(result);
     });
 
-    // collect user data
+    // Store user data
     app.post("/users", async (req, res) => {
       const user = req.body;
       const query = { email: user.email };
@@ -47,7 +47,7 @@ async function run() {
     });
 
     // User Role Update
-    app.patch('users/admin/:id', async (req, res)=>{
+    app.patch('users/:id', async (req, res)=>{
 const id = req.params.id;
 const filter = {_id: new ObjectId(id)}
 const updateRole = {
