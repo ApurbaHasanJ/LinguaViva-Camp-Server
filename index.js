@@ -66,14 +66,11 @@ async function run() {
       res.send({ userToken });
     });
 
-
-    
     // get all users
     app.get("/users", async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
-
 
     // Store user data
     app.post("/users", async (req, res) => {
@@ -87,7 +84,6 @@ async function run() {
       const result = await usersCollection.insertOne(user);
       res.send(result);
     });
-
 
     // User Role Update
     app.patch("/users/:id", async (req, res) => {
@@ -103,7 +99,6 @@ async function run() {
       res.send({ modifiedCount: result.modifiedCount }); // Send modified count
     });
 
-
     // Store Classes
     app.post("/classes", verifyJWT, async (req, res) => {
       const cls = req.body;
@@ -114,32 +109,44 @@ async function run() {
       res.send(result);
     });
 
-     // Get Instructor's Classes
-   
+    // Get Instructor's Classes
     app.get("/classes", async (req, res) => {
       const result = await classesCollection.find().toArray();
       res.send(result);
     });
 
-    // patch classes by admin
-   
-app.patch("/classes/:id/status", async (req, res) => {
+// Update Class by Instructor
+app.patch("/classes/:id", verifyJWT, async (req, res) => {
   const id = req.params.id;
   const filter = { _id: new ObjectId(id) };
-  const updateStatus = {
-    $set: { status: req.body.status },
+  const updateClass = {
+    $set: {
+      clsTitle: req.body.title,
+      description: req.body.description,
+      availableSeats: Number(req.body.availableSeats),
+      price: Number(req.body.price),
+      thumbnailUrl: req.body.thumbnailUrl 
+    },
   };
-
-  if (req.body.status === "denied") {
-    updateStatus.$set.feedback = req.body.feedback;
-  }
-
-  const result = await classesCollection.updateOne(filter, updateStatus);
+  const result = await classesCollection.updateOne(filter, updateClass);
   res.send({ modifiedCount: result.modifiedCount });
 });
 
-    
+    // Update Class Status by Admin
+    app.patch("/classes/:id/status", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updateStatus = {
+        $set: { status: req.body.status },
+      };
 
+      if (req.body.status === "denied") {
+        updateStatus.$set.feedback = req.body.feedback;
+      }
+
+      const result = await classesCollection.updateOne(filter, updateStatus);
+      res.send({ modifiedCount: result.modifiedCount });
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
