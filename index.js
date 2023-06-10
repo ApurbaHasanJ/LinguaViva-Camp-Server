@@ -3,6 +3,7 @@ const app = express();
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const port = process.env.port || 5000;
 
 // middleware
@@ -38,7 +39,6 @@ const verifyJWT = (req, res, next) => {
 //         return res.send(403).send({error: true, message : 'forbidden access'})
 //       }
 
-const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@believer.igrxpib.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -56,6 +56,7 @@ async function run() {
     await client.connect();
 
     const usersCollection = client.db("LVCdb").collection("users");
+    const classesCollection = client.db('LVCdb').collection("classes");
 
     app.post("/jwt", (req, res) => {
       const user = req.body;
@@ -99,6 +100,14 @@ async function run() {
       const result = await usersCollection.updateOne(filter, updateRole);
       res.send({ modifiedCount: result.modifiedCount }); // Send modified count
     });
+
+   // Store Classes 
+app.post('/classes', async (req, res) => {
+  const cls = req.body;
+  cls.status = 'pending';
+  const result = await classesCollection.insertOne(cls)
+  res.send(result);
+});
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
