@@ -56,7 +56,7 @@ async function run() {
     await client.connect();
 
     const usersCollection = client.db("LVCdb").collection("users");
-    const classesCollection = client.db('LVCdb').collection("classes");
+    const classesCollection = client.db("LVCdb").collection("classes");
 
     app.post("/jwt", (req, res) => {
       const user = req.body;
@@ -66,12 +66,13 @@ async function run() {
       res.send({ userToken });
     });
 
+    
     // get all users
     app.get("/users", async (req, res) => {
-      
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
+
 
     // Store user data
     app.post("/users", async (req, res) => {
@@ -86,6 +87,7 @@ async function run() {
       res.send(result);
     });
 
+
     // User Role Update
     app.patch("/users/:id", async (req, res) => {
       const id = req.params.id;
@@ -96,33 +98,33 @@ async function run() {
           role: req.body.role,
         },
       };
-
       const result = await usersCollection.updateOne(filter, updateRole);
       res.send({ modifiedCount: result.modifiedCount }); // Send modified count
     });
 
-   // Store Classes 
-app.post('/classes', async (req, res) => {
-  const cls = req.body;
-  cls.status = 'pending';
-  const result = await classesCollection.insertOne(cls)
-  res.send(result);
-});
 
+    // Store Classes
+    app.post("/classes", verifyJWT, async (req, res) => {
+      const cls = req.body;
+      cls.status = "pending";
+      cls.availableSeats = Number(cls.availableSeats);
+      cls.price = Number(cls.price);
+      const result = await classesCollection.insertOne(cls);
+      res.send(result);
+    });
 
-// Approve Class
-app.patch('/classes/:id/approve', async (req, res) => {
-  const id = req.params.id;
-  const filter = { _id: new ObjectId(id) };
-  const updateStatus = {
-    $set: {
-      status: 'approved',
-    },
-  };
-  const result = await classesCollection.updateOne(filter, updateStatus);
-  res.send({ modifiedCount: result.modifiedCount });
-});
-
+    // Approve Class
+    app.patch("/classes/:id/approve", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updateStatus = {
+        $set: {
+          status: "approved",
+        },
+      };
+      const result = await classesCollection.updateOne(filter, updateStatus);
+      res.send({ modifiedCount: result.modifiedCount });
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
