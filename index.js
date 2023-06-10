@@ -109,6 +109,21 @@ app.post('/classes', async (req, res) => {
   res.send(result);
 });
 
+
+// Approve Class
+app.patch('/classes/:id/approve', async (req, res) => {
+  const id = req.params.id;
+  const filter = { _id: new ObjectId(id) };
+  const updateStatus = {
+    $set: {
+      status: 'approved',
+    },
+  };
+  const result = await classesCollection.updateOne(filter, updateStatus);
+  res.send({ modifiedCount: result.modifiedCount });
+});
+
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
