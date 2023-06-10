@@ -66,6 +66,7 @@ async function run() {
       res.send({ userToken });
     });
 
+
     
     // get all users
     app.get("/users", async (req, res) => {
@@ -113,18 +114,32 @@ async function run() {
       res.send(result);
     });
 
-    // Approve Class
-    app.patch("/classes/:id/approve", async (req, res) => {
-      const id = req.params.id;
-      const filter = { _id: new ObjectId(id) };
-      const updateStatus = {
-        $set: {
-          status: "approved",
-        },
-      };
-      const result = await classesCollection.updateOne(filter, updateStatus);
-      res.send({ modifiedCount: result.modifiedCount });
+     // Get Instructor's Classes
+   
+    app.get("/classes", async (req, res) => {
+      const result = await classesCollection.find().toArray();
+      res.send(result);
     });
+
+    // patch classes by admin
+   
+app.patch("/classes/:id/status", async (req, res) => {
+  const id = req.params.id;
+  const filter = { _id: new ObjectId(id) };
+  const updateStatus = {
+    $set: { status: req.body.status },
+  };
+
+  if (req.body.status === "denied") {
+    updateStatus.$set.feedback = req.body.feedback;
+  }
+
+  const result = await classesCollection.updateOne(filter, updateStatus);
+  res.send({ modifiedCount: result.modifiedCount });
+});
+
+    
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
