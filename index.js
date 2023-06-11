@@ -57,6 +57,7 @@ async function run() {
 
     const usersCollection = client.db("LVCdb").collection("users");
     const classesCollection = client.db("LVCdb").collection("classes");
+    const bookedClassesCollection = client.db("LVCdb").collection("bookedClasses");
 
     app.post("/jwt", (req, res) => {
       const user = req.body;
@@ -114,7 +115,7 @@ async function run() {
       res.send(result);
     });
 
-    // Update Class by Instructor
+    // Update Classes by Instructor
     app.patch("/classes/:id", verifyJWT, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
@@ -146,6 +147,7 @@ async function run() {
       res.send({ modifiedCount: result.modifiedCount });
     });
 
+
     // Get Approved Classes
     app.get("/classes/approved", async (req, res) => {
       const approvedClasses = await classesCollection
@@ -153,6 +155,15 @@ async function run() {
         .toArray();
       res.send(approvedClasses);
     });
+
+
+    // Store Booked classes by students
+    app.post("/bookedClasses", async (req, res) => {
+      const cls = req.body;
+      const result = await bookedClassesCollection.insertOne(cls);
+      res.send(result);
+    });
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
