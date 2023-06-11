@@ -57,7 +57,9 @@ async function run() {
 
     const usersCollection = client.db("LVCdb").collection("users");
     const classesCollection = client.db("LVCdb").collection("classes");
-    const bookedClassesCollection = client.db("LVCdb").collection("bookedClasses");
+    const bookedClassesCollection = client
+      .db("LVCdb")
+      .collection("bookedClasses");
 
     app.post("/jwt", (req, res) => {
       const user = req.body;
@@ -93,11 +95,10 @@ async function run() {
       const updateData = {
         $set: { role: req.body.role, btn: false },
       };
-    
+
       const result = await usersCollection.updateOne(filter, updateData);
       res.send({ modifiedCount: result.modifiedCount });
     });
-    
 
     // Store Classes
     app.post("/classes", verifyJWT, async (req, res) => {
@@ -147,7 +148,6 @@ async function run() {
       res.send({ modifiedCount: result.modifiedCount });
     });
 
-
     // Get Approved Classes
     app.get("/classes/approved", async (req, res) => {
       const approvedClasses = await classesCollection
@@ -156,7 +156,6 @@ async function run() {
       res.send(approvedClasses);
     });
 
-
     // Store Booked classes by students
     app.post("/bookedClasses", async (req, res) => {
       const cls = req.body;
@@ -164,6 +163,16 @@ async function run() {
       res.send(result);
     });
 
+    // Get student Booked classes
+    app.get("/bookedClasses", async (req, res) => {
+      const email = req.query.email;
+      if (!email) {
+        res.send([]);
+      }
+      const query = { email: email };
+      const result = await bookedClassesCollection.find(query).toArray();
+      res.send(result);
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
