@@ -89,15 +89,14 @@ async function run() {
     app.patch("/users/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
-      const updateRole = {
-        // Set the role based on the request body
-        $set: {
-          role: req.body.role,
-        },
+      const updateData = {
+        $set: { role: req.body.role, btn: false },
       };
-      const result = await usersCollection.updateOne(filter, updateRole);
-      res.send({ modifiedCount: result.modifiedCount }); // Send modified count
+    
+      const result = await usersCollection.updateOne(filter, updateData);
+      res.send({ modifiedCount: result.modifiedCount });
     });
+    
 
     // Store Classes
     app.post("/classes", verifyJWT, async (req, res) => {
@@ -115,22 +114,21 @@ async function run() {
       res.send(result);
     });
 
-// Update Class by Instructor
-app.patch("/classes/:id", verifyJWT, async (req, res) => {
-  const id = req.params.id;
-  const filter = { _id: new ObjectId(id) };
-  const updateClass = {
-    $set: {
-      clsTitle: req.body.title,
-      description: req.body.description,
-      availableSeats: Number(req.body.availableSeats),
-      price: Number(req.body.price),
-      thumbnailUrl: req.body.thumbnailUrl 
-    },
-  };
-  const result = await classesCollection.updateOne(filter, updateClass);
-  res.send({ modifiedCount: result.modifiedCount });
-});
+    // Update Class by Instructor
+    app.patch("/classes/:id", verifyJWT, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updateClass = {
+        $set: {
+          clsTitle: req.body.title,
+          thumbnailUrl: req.body.thumbnailUrl,
+          availableSeats: Number(req.body.availableSeats),
+          price: Number(req.body.price),
+        },
+      };
+      const result = await classesCollection.updateOne(filter, updateClass);
+      res.send({ modifiedCount: result.modifiedCount });
+    });
 
     // Update Class Status by Admin
     app.patch("/classes/:id/status", async (req, res) => {
@@ -146,6 +144,14 @@ app.patch("/classes/:id", verifyJWT, async (req, res) => {
 
       const result = await classesCollection.updateOne(filter, updateStatus);
       res.send({ modifiedCount: result.modifiedCount });
+    });
+
+    // Get Approved Classes
+    app.get("/classes/approved", async (req, res) => {
+      const approvedClasses = await classesCollection
+        .find({ status: "approved" })
+        .toArray();
+      res.send(approvedClasses);
     });
 
     // Send a ping to confirm a successful connection
