@@ -75,6 +75,14 @@ async function run() {
       res.send(result);
     });
 
+    // Get all instructors
+    app.get("/instructors", async (req, res) => {
+      const instructors = await usersCollection
+        .find({ role: "Instructor" })
+        .toArray();
+      res.send(instructors);
+    });
+
     // Store user data
     app.post("/users", async (req, res) => {
       const user = req.body;
@@ -172,6 +180,24 @@ async function run() {
       const query = { email: email };
       const result = await bookedClassesCollection.find(query).toArray();
       res.send(result);
+    });
+
+    // delete booked classes
+    app.delete("/bookedClasses/:id", async (req, res) => {
+      const id = req.params.id;
+      try {
+        const query = { _id: new ObjectId(id) };
+        const result = await bookedClassesCollection.deleteOne(query);
+        if (result.deletedCount === 1) {
+          res.send("Successfully deleted the booked class.");
+        } else {
+          res.status(404).send("Booked class not found.");
+        }
+      } catch (error) {
+        res
+          .status(500)
+          .send("An error occurred while deleting the booked class.");
+      }
     });
 
     // Send a ping to confirm a successful connection
