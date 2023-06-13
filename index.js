@@ -54,7 +54,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    // await client.connect();
+    await client.connect();
 
     const usersCollection = client.db("LVCdb").collection("users");
     const classesCollection = client.db("LVCdb").collection("classes");
@@ -70,14 +70,39 @@ async function run() {
       res.send({ userToken });
     });
 
-    // get all users
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+
+      if (user?.role !== "Admin") {
+        return res.status(403).send({ error: true, message: "Forbidden" });
+      }
+
+      next();
+    };
+
+    // Verify Instructor
+    const verifyInstructor = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+
+      if (user?.role !== "Instructor") {
+        return res.status(403).send({ error: true, message: "Forbidden" });
+      }
+
+      next();
+    };
+
+    // get all users by admin
     app.get("/users", async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
 
     // Get all instructors
-    app.get("/instructors", async (req, res) => {
+    app.get("/instructors",  async (req, res) => {
       const instructors = await usersCollection
         .find({ role: "Instructor" })
         .toArray();
@@ -110,7 +135,7 @@ async function run() {
     });
 
     // Store Classes
-    app.post("/classes", verifyJWT, async (req, res) => {
+    app.post("/classes",async (req, res) => {
       const cls = req.body;
       cls.status = "pending";
       cls.availableSeats = Number(cls.availableSeats);
@@ -126,7 +151,7 @@ async function run() {
     });
 
     // Update Classes by Instructor
-    app.patch("/classes/:id", verifyJWT, async (req, res) => {
+    app.patch("/classes/:id",async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updateClass = {
@@ -207,16 +232,14 @@ async function run() {
       const amount = price * 100;
       const paymentIntent = await stripe.paymentIntents.create({
         amount,
-                currency: amount,
-                currency: "usd",
-                payment_method_types: ["card"],
-                
-      })
+        currency: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
       res.send({
-        clientSecret: paymentIntent.client_secret
-      })
+        clientSecret: paymentIntent.client_secret,
+      });
     });
-    
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
