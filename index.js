@@ -54,7 +54,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
 
     const usersCollection = client.db("LVCdb").collection("users");
     const classesCollection = client.db("LVCdb").collection("classes");
@@ -70,30 +70,57 @@ async function run() {
       res.send({ userToken });
     });
 
+    // verify admin middleware
     const verifyAdmin = async (req, res, next) => {
       const email = req.decoded.email;
       const query = { email: email };
       const user = await usersCollection.findOne(query);
-
-      if (user?.role !== "Admin") {
-        return res.status(403).send({ error: true, message: "Forbidden" });
-      }
-
+      if (user?.role !== "Admin")
+        return res
+          .status(403)
+          .send({ error: true, message: "Forbidden Access" });
       next();
     };
 
-    // Verify Instructor
+    // verify admin middleware
     const verifyInstructor = async (req, res, next) => {
       const email = req.decoded.email;
       const query = { email: email };
       const user = await usersCollection.findOne(query);
-
-      if (user?.role !== "Instructor") {
-        return res.status(403).send({ error: true, message: "Forbidden" });
-      }
-
+      if (user?.role !== "Instructor")
+        return res
+          .status(403)
+          .send({ error: true, message: "Forbidden Access" });
       next();
     };
+
+    // check admin role
+    app.get("/users/admin/:email", verifyJWT, async (req, res) => {
+      const email = req.params.email;
+
+      if (req.decoded.email !== email) {
+        res.send({ admin: false });
+      }
+
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      const result = { admin: user?.role === "Admin" };
+      res.send(result);
+    });
+
+    // check instructor role
+    app.get("/users/instructor/:email", verifyJWT, async (req, res) => {
+      const email = req.params.email;
+
+      if (req.decoded.email !== email) {
+        res.send({ instructor: false });
+      }
+
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      const result = { instructor: user?.role === "Instructor" };
+      res.send(result);
+    });
 
     // get all users by admin
     app.get("/users", async (req, res) => {
@@ -102,11 +129,21 @@ async function run() {
     });
 
     // Get all instructors
-    app.get("/instructors",  async (req, res) => {
+    app.get("/instructors", async (req, res) => {
       const instructors = await usersCollection
         .find({ role: "Instructor" })
         .toArray();
       res.send(instructors);
+    });
+
+    // Get the last added instructor
+    app.get("/popular-instructors", async (req, res) => {
+      const popularInstructor = await usersCollection
+        .find({ role: "Instructor" })
+        .limit(6)
+        .toArray();
+
+      res.send(popularInstructor);
     });
 
     // Store user data
@@ -135,7 +172,7 @@ async function run() {
     });
 
     // Store Classes
-    app.post("/classes",async (req, res) => {
+    app.post("/classes", async (req, res) => {
       const cls = req.body;
       cls.status = "pending";
       cls.availableSeats = Number(cls.availableSeats);
@@ -146,12 +183,23 @@ async function run() {
 
     // Get Instructor's Classes
     app.get("/classes", async (req, res) => {
-      const result = await classesCollection.find().toArray();
+      const result = await classesCollection.find({}).toArray();
+      res.send(result);
+    });
+
+    // Last 6 classes
+    app.get("/popular-classes", async (req, res) => {
+      const result = await classesCollection
+        .find()
+        .sort({ _id: -1 })
+        .limit(6)
+        .toArray();
+
       res.send(result);
     });
 
     // Update Classes by Instructor
-    app.patch("/classes/:id",async (req, res) => {
+    app.patch("/classes/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updateClass = {
