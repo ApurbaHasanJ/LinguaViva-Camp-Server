@@ -13,6 +13,7 @@ app.use(express.json());
 
 const verifyJWT = (req, res, next) => {
   const authorization = req.headers.authorization;
+  console.log({ authorization });
   if (!authorization) {
     return res
       .status(401)
@@ -21,6 +22,7 @@ const verifyJWT = (req, res, next) => {
   // bearer token
   const token = authorization.split(" ")[1];
   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    console.log({ err });
     if (err) {
       return res
         .status(401)
@@ -30,15 +32,6 @@ const verifyJWT = (req, res, next) => {
     next();
   });
 };
-
-// const email = req.query.email;
-//       if(!email){
-//         res.send([])
-//       }
-//       const decodedEmail = req.decoded.email
-//       if(email !== decodedEmail){
-//         return res.send(403).send({error: true, message : 'forbidden access'})
-//       }
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@believer.igrxpib.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -123,13 +116,13 @@ async function run() {
     });
 
     // get all users by admin
-    app.get("/users", async (req, res) => {
+    app.get("/users", verifyJWT, verifyAdmin, async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
 
     // Get all instructors
-    app.get("/instructors", async (req, res) => {
+    app.get("/instructors", verifyJWT, async (req, res) => {
       const instructors = await usersCollection
         .find({ role: "Instructor" })
         .toArray();
@@ -190,7 +183,7 @@ async function run() {
     // Last 6 classes
     app.get("/popular-classes", async (req, res) => {
       const result = await classesCollection
-        .find()
+        .find({ status: "approved" })
         .sort({ _id: -1 })
         .limit(6)
         .toArray();
@@ -199,7 +192,7 @@ async function run() {
     });
 
     // Update Classes by Instructor
-    app.patch("/classes/:id", async (req, res) => {
+    app.patch("/classes/:id", verifyJWT, verifyInstructor, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updateClass = {
@@ -246,11 +239,17 @@ async function run() {
     });
 
     // Get student Booked classes
-    app.get("/bookedClasses", async (req, res) => {
+    app.get("/bookedClasses", verifyJWT, async (req, res) => {
       const email = req.query.email;
       if (!email) {
         res.send([]);
       }
+
+      const decodedEmail = req.decoded.email;
+      if (email !== decodedEmail) {
+        return res.send(403).send({ error: true, message: "forbidden access" });
+      }
+
       const query = { email: email };
       const result = await bookedClassesCollection.find(query).toArray();
       res.send(result);
