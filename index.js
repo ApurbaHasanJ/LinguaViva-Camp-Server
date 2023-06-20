@@ -122,7 +122,7 @@ async function run() {
     });
 
     // Get all instructors
-    app.get("/instructors", verifyJWT, async (req, res) => {
+    app.get("/instructors", async (req, res) => {
       const instructors = await usersCollection
         .find({ role: "Instructor" })
         .toArray();
