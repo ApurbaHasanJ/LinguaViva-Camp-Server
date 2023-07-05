@@ -51,6 +51,8 @@ async function run() {
 
     const usersCollection = client.db("LVCdb").collection("users");
     const classesCollection = client.db("LVCdb").collection("classes");
+    const programsCollection = client.db("LVCdb").collection("programs");
+    const paymentCollection = client.db("LVCdb").collection("payment");
     const bookedClassesCollection = client
       .db("LVCdb")
       .collection("bookedClasses");
@@ -100,6 +102,12 @@ async function run() {
       const result = { admin: user?.role === "Admin" };
       res.send(result);
     });
+
+    // get programs data
+    app.get("/programs",  async (req, res) => {
+      const programs = await programsCollection.find().toArray();
+      res.send(programs);
+    })
 
     // check instructor role
     app.get("/users/instructor/:email", verifyJWT, async (req, res) => {
@@ -163,6 +171,64 @@ async function run() {
       const result = await usersCollection.updateOne(filter, updateData);
       res.send({ modifiedCount: result.modifiedCount });
     });
+
+    // Update User Information
+    app.patch("/users/info", async (req, res) => {
+      const email = req.body.email; // Get the email from the request body
+      const filter = { email: email }; // Use email as the filter
+      const updateData = {
+        $set: {
+          displayName: req.body.displayName,
+          birthday: req.body.birthday,
+          age: req.body.age,
+          residence: req.body.residence,
+          address: req.body.address,
+          phone: req.body.phone,
+          email: req.body.email,
+          facebook: req.body.facebook,
+          linkedin: req.body.linkedin,
+        },
+      };
+
+      try {
+        const result = await usersCollection.updateOne(filter, updateData);
+        res.send({ modifiedCount: result.modifiedCount });
+      } catch (error) {
+        console.error("Error updating user information:", error);
+        res.status(500).send({
+          error: "An error occurred while updating user information.",
+        });
+      }
+    });
+
+    // get user info
+    app.get("/users/info", async (req, res) => {
+      const email = req.query.email; // Get the email from the query parameters
+    
+      try {
+        const user = await usersCollection.findOne({ email });
+        if (user) {
+          const userInfo = {
+            displayName: user.displayName,
+            birthday: user.birthday,
+            age: user.age,
+            residence: user.residence,
+            address: user.address,
+            phone: user.phone,
+            email: user.email,
+            facebook: user.facebook,
+            linkedin: user.linkedin,
+          };
+          res.send(userInfo);
+        } else {
+          res.status(404).send({ error: "User not found" });
+        }
+      } catch (error) {
+        console.error("Error retrieving user information:", error);
+        res.status(500).send({ error: "An error occurred while retrieving user information" });
+      }
+    });
+    
 
     // Store Classes
     app.post("/classes", async (req, res) => {
@@ -287,6 +353,60 @@ async function run() {
         clientSecret: paymentIntent.client_secret,
       });
     });
+
+    // app.post('/payment', verifyJWT, async (req, res) => {
+    //   const payment = req.body;
+    //   const result = await paymentCollection.insertOne(payment)
+    
+    //   res.send(result);
+    // })
+
+    // get payment
+    app.get("/payment", verifyJWT, async (req, res) => {
+      const email = req.query.email;
+      if (!email) {
+        res.send([]);
+      }
+
+      const decodedEmail = req.decoded.email;
+      if (email !== decodedEmail) {
+        return res.send(403).send({ error: true, message: "forbidden access" });
+      }
+
+      const query = { email: email };
+      const result = await paymentCollection.find(query).toArray();
+
+      res.send(result);
+    });
+
+    app.post("/payment", verifyJWT, async (req, res) => {
+      const payment = req.body;
+      const selectedCls = payment.selectedCls;
+      // const classId = paymentDetail.classId;
+
+      // const updateQuery = { _id: new ObjectId(classId) };
+
+      // const updateDoc = {
+      //   $inc: {
+      //     availableSeats: -1,
+      //     enrolled: 1,
+      //   },
+      // };
+
+      const insertedResult = await paymentCollection.insertOne(payment);
+
+      // const updateResult = await classesCollection.updateOne(
+      //   updateQuery,
+      //   updateDoc
+      // );
+
+      const deleteResult = await bookedClassesCollection.deleteOne({
+        _id: new ObjectId(selectedCls),
+      });
+
+      res.send({ insertedResult, deleteResult });
+    });
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
